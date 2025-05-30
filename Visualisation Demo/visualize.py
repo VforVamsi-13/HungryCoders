@@ -25,8 +25,11 @@ def generate_plot(csv_string, plot_type, x_col, y_col=None):
     elif plot_type == "kde":
         sns.kdeplot(data=df, x=x_col, ax=ax)
     elif plot_type == "pie":
-        df.groupby(x_col)[y_col].sum().plot.pie(ax=ax, autopct='%1.1f%%')
+          # Count occurrences of each category in x_col
+        pie_data = df[x_col].value_counts()
+        pie_data.plot.pie(ax=ax, autopct='%1.1f%%')
         ax.set_ylabel('')
+
 
     plt.tight_layout()
 
