@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
-from pygame import init
+from fastapi.middleware.cors import CORSMiddleware
 import requests
 import sqlite3
 
@@ -11,6 +11,38 @@ DB_PATH = "nlp_sql.db"
 
 class QueryRequest(BaseModel):
     natural_language: str
+    table_name: str
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Replace with actual domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+import re
+
+def extract_sql_from_markdown(markdown_text):
+    """
+    Extracts SQL query from markdown-formatted text.
+
+    Parameters:
+        markdown_text (str): Markdown text containing an SQL query.
+
+    Returns:
+        str: Raw SQL query without markdown formatting.
+    """
+    # Match fenced code blocks likesql ...
+    print("markdown_text", markdown_text)
+    match = re.search(r"```(?:sql)?\s*([\s\S]*?)```", markdown_text, re.DOTALL | re.IGNORECASE)
+    if match:
+        print(match)
+        return match.group(1).strip()
+
+    # If no fenced code blocks found, return the text assuming it's plain SQL
+    print("query", markdown_text.strip())
+    return markdown_text.strip()
 
 def generate_sql_from_nlp(prompt: str) -> str:
     response = requests.post(
@@ -25,7 +57,7 @@ def generate_sql_from_nlp(prompt: str) -> str:
     return result["response"].strip()
 
 def init__init():
-    response = requests.post(
+    requests.post(
         OLLAMA_URL,
         json={
             "model": "llama2",
@@ -33,19 +65,37 @@ def init__init():
             "stream": False
         }
     )
+    requests.post(
+        OLLAMA_URL,
+        json={
+            "model": "llama2",
+            "prompt": (
+                "Use the database schema to answer the following questions in further prompts The schema is: `CREATE TABLE customers (id INTEGER PRIMARY KEY,name TEXT,email TEXT,signup_date DATE);`"
+            ),
+            "stream": False
+        }
+    )
+    print("done")
 
 def execute_sql_query(query: str):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    if '```\n' in query:
+        query = query.split('```\n')[1].strip()
+    if '\n```' in query:
+        query = query.split('\n```')[0].strip()
+    print("Executing SQL query:", query)
     try:
         cursor.execute(query)
         columns = [desc[0] for desc in cursor.description]
         rows = cursor.fetchall()
         return {"columns": columns, "rows": rows}
     except Exception as e:
-        return {"error": str(e)}
+        print("Error executing SQL query:", e)
+        return {"error": "Please enter a valid question."}
     finally:
         conn.close()
+
 
 @app.post("/query")
 def query_sql(req: QueryRequest):
@@ -56,6 +106,7 @@ def query_sql(req: QueryRequest):
         "generated_sql": sql,
         "result": result
     }
+
 init__init()
-q=QueryRequest(natural_language="Select all customers")
-print(query_sql(q))
+# To run this API on a port, use:
+# python uvicorn main:app --host 0.0.0.0 --port 8000
