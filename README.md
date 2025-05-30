@@ -1,2 +1,2 @@
 # HungryCoders
-SRM Hackathon : Project "Smart DB"
+SRM Hackathon : Project "QueryEase"
