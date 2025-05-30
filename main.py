@@ -11,7 +11,7 @@ DB_PATH = "nlp_sql.db"
 
 class QueryRequest(BaseModel):
     natural_language: str
-    table_name: str
+    # table_name: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -109,4 +109,4 @@ def query_sql(req: QueryRequest):
 
 init__init()
 # To run this API on a port, use:
-# python uvicorn main:app --host 0.0.0.0 --port 8000
+# python uvicorn main:app --host 0.0.0.0 --port 8001
